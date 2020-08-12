@@ -1,0 +1,26 @@
+{
+  "name": "ClanOnDiscord",
+  "version": "0.0.1",
+  "description": "A simple Discord bot to see which clan members are currently playing Destiny",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.io": "github:woor/discord.io#gateway_v6",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.0"
+  },
+  "engines": {
+    "node": "12.x"
+  },
+  "repository": {
+    "url": "github.com/mowzie/discordBots/clanOn/"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "discord"
+  ]
+}
