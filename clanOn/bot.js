@@ -12,17 +12,17 @@ const bot = new Discord.Client({
 });
 
 bot.once('ready', () => {
-	console.log('Ready!');
-	    bot.setPresence({
-		            game: {
-				                name: '!clanon',
-				            }
-		        });
+  console.log('Ready!');
+    bot.setPresence({
+      game: {
+              name: '!clanon',
+      }
+    });
 });
 
 bot.on('disconnect', function(erMsg, code) {
-    console.log('----- Bot disconnected from Discord with code', code, 'for reason:', erMsg, '-----');
-    bot.connect();
+  console.log('----- Bot disconnected from Discord with code', code, 'for reason:', erMsg, '-----');
+  bot.connect();
 });
 
 bot.on('message', async function(user, userID, channelID, message, event) {
@@ -30,11 +30,11 @@ bot.on('message', async function(user, userID, channelID, message, event) {
   if (message.startsWith(prefix)) { // Message starts with prefix
     let command = message.slice(prefix.length).split(" "); // Split message into words
     if (command.length != 1){
-	    return;
+      return;
     }
     switch (command[0]) { // Execute code depending on first word
       case "clanon":
-	bot.simulateTyping(channelID);
+        bot.simulateTyping(channelID);
         bot.sendMessage({to: channelID, embed: await getOnlineMembers()});
         break;
     }
@@ -56,25 +56,25 @@ async function getOnlineMembers(){
   const results = await getBungieApiRequest(`${bungieApiRoot}/GroupV2/${groupId}/Members/`);
 
   if (results.ErrorCode == 1) {
-    var membersOnline = [];
+    var allOnlineMembers = [];
     var membersList = results.Response.results;
 
     membersList.forEach(function(member){
       if (member.isOnline){
         const name = member.destinyUserInfo.displayName;
         const platform = member.destinyUserInfo.LastSeenDisplayNameType;
-        membersOnline.push({name, platform});
+        allOnlineMembers.push({name, platform});
       }
     });
 
    var fields = [];
 
     for(var platform in PlatformDict){
-      var onlineMembers = getUsersByPlatform(membersOnline, PlatformDict[platform]);
+      var onlineMembers = getUsersByPlatform(allOnlineMembers, PlatformDict[platform]);
       if (onlineMembers.length > 0)
         fields.push(
           {
-            'name': platform,
+            'name': `${platform} (${onlineMembers.length})`,
             'value': onlineMembers,
           }
         )
@@ -87,9 +87,9 @@ async function getOnlineMembers(){
 
     return logMessage;
   }
-	else {
-		console.log(results);
-	}
+  else {
+    console.log(results);
+  }
 }
 
 function getUsersByPlatform(membersList, platform){
@@ -110,4 +110,3 @@ const PlatformDict = {
   PC2: 4,
   Stadia: 5,
 };
-
