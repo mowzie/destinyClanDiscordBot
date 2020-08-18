@@ -74,7 +74,7 @@ async function getOnlineMembers(){
       if (onlineMembers.length > 0)
         fields.push(
           {
-            'name': `${platform} (${onlineMembers.length})`,
+            'name': `${platform} (${onlineMembers.split(',').length})`,
             'value': onlineMembers,
           }
         )
