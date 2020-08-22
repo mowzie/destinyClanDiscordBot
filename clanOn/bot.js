@@ -33,7 +33,7 @@ bot.on('message', async function(user, userID, channelID, message, event) {
       return;
     }
     switch (command[0]) { // Execute code depending on first word
-      case "clanwho":
+      case "clanon":
         bot.simulateTyping(channelID);
         bot.sendMessage({to: channelID, embed: await getOnlineMembers()});
         break;
@@ -51,7 +51,7 @@ async function getOnlineMembers(){
     var membersList = results.Response.results;
 
 
-    await asyncForEach(membersList, (async function(member){
+    await Promise.all(membersList.map(async (member) => {
       if (member.isOnline){
         const name = member.destinyUserInfo.LastSeenDisplayName;
         const platform = member.destinyUserInfo.membershipType;
@@ -61,9 +61,6 @@ async function getOnlineMembers(){
         allOnlineMembers.push({name, platform, lastPlatform, membershipId, activity});
       }
     }));
-    
-    //console.log(allOnlineMembers);
-//${member.activity.inMatchMaking ? '(MM)' : ''}
     var fields = [];
 
     for(var platform in PlatformDict){

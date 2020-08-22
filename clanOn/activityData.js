@@ -2,31 +2,38 @@ const {getBungieRequest} = require('./fetch.js');
 const activityManifest = require('./manifestActivity.json');
 const modeManifest = require('./manifestMode.json');
 const destinationManifest = require('./manifestDestination.json');
+const {adventures}  = require('./enums');
 
 async function getActivityData(membershipType, membershipId, bungieToken){
-    const request = await getBungieRequest(`Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {components: '200,204,1000'}); 
+    const request = await getBungieRequest(`Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {components: '100,200,204,1000'}); 
   if (request.ErrorCode != 1){
     return;
   }
   const profile = request.Response;
-  if (profile === undefined){
-    return;
-  }
+   if (!profile) {
+    return [{}];
+   }
 
-
-  return Object.keys(profile.characterActivities.data).map(character => {
+  const currentActivity = Object.keys(profile.characterActivities.data).map(character => {
     const lastActivity = profile.characterActivities.data[character];
+
     const definitionActivity = lastActivity.currentActivityHash && activityManifest[lastActivity.currentActivityHash];
     const definitionActivityMode = lastActivity.currentActivityModeHash && modeManifest[lastActivity.currentActivityModeHash];
     const definitionDestination = destinationManifest[definitionActivity.destinationHash];
     const definitionActivityPlaylist = lastActivity.currentPlaylistActivityHash && activityManifest[lastActivity.currentPlaylistActivityHash]
     let lastActivityString = false;
+    const name = profile.profile.data.userInfo.displayName;
     if (definitionActivity && !definitionActivity.redacted) {
-        if (definitionActivity.placeHash === 2961497387) {
+      if (adventures.includes(definitionActivity.hash)) {
+        // Adventures
+
+        lastActivityString = `${t('Adventure')}: ${definitionActivity.displayProperties.name}`;
+      }
+        else if (definitionActivity.placeHash === 2961497387) {
             // Orbit
     
             lastActivityString = "In Orbit";
-          } 
+          }
 
 
            else if (definitionActivityMode && definitionActivityMode.hash === 3497767639) {
@@ -72,7 +79,7 @@ async function getActivityData(membershipType, membershipId, bungieToken){
           // Crucible
   
           lastActivityString = `${modeManifest[1164760504].displayProperties.name}: ${definitionActivityPlaylist.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
-        } else if ([135537449, 740891329].includes(lastActivity.currentPlaylistActivityHash)) {
+        } else if ([135537449, 740891329, 1166905690].includes(lastActivity.currentPlaylistActivityHash)) {
           // Survival, Survival: Freelances
   
           lastActivityString = `${definitionActivityPlaylist.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
@@ -102,13 +109,20 @@ async function getActivityData(membershipType, membershipId, bungieToken){
       }
 
     const lastMode = (definitionActivityMode && definitionActivityMode.parentHashes && definitionActivityMode.parentHashes.map((hash) => modeManifest[hash])) || [];
-    const joinability = profile.profileTransitoryData.data.joinability;
+    const joinability = profile.profileTransitoryData.data && profile.profileTransitoryData.data.joinability;
     return {
+      'displayName': name,
+      'character': character,
+      'lastActivity': lastActivity.availableActivities[0],
       'name': lastActivityString,
       'mode': lastMode,
+      'lastPlayed': profile.characters.data[character].dateLastPlayed,
+      'activityHash': lastActivity.currentActivityHash,
+      'definitionActivity': definitionActivity,
       'definitionActivityMode': definitionActivityMode,
       'definitionActivityPlaylist': definitionActivityPlaylist,
-      'inMatchMaking': joinability.openSlots > 0 && joinability.closedReasons == 1,
+      'definitionDestination': definitionDestination,
+      'inMatchMaking': joinability && joinability.openSlots > 0 && joinability.closedReasons == 1,
       'matchmakingProperties': definitionActivityPlaylist && definitionActivityPlaylist.matchmaking || definitionActivity.matchmaking
     }
   }).sort((a, b) => {
@@ -116,6 +130,8 @@ async function getActivityData(membershipType, membershipId, bungieToken){
       return -1;
     return 1;
   })[0];
+
+  return currentActivity;
 }
 
 module.exports = { getActivityData };
