@@ -1,11 +1,12 @@
 const Discord = require('discord.io');
-const fetch = require('node-fetch');
 require('dotenv').config();
+const {getBungieRequest} = require('./fetch.js');
+const activityManifest = require('./manifestActivity.json');
+const modeManifest = require('./manifestMode.json');
+const destinationManifest = require('./manifestDestination.json');
 const prefix = '!';
-
-const bungieApiRoot = 'https://www.bungie.net/Platform';
+const bungieToken = process.env.TOKEN;
 const groupId = process.env.GROUPID;
-console.log(groupId);
 const bot = new Discord.Client({
   token: process.env.DISCORDTOKEN,
   autorun: true
@@ -33,7 +34,7 @@ bot.on('message', async function(user, userID, channelID, message, event) {
       return;
     }
     switch (command[0]) { // Execute code depending on first word
-      case "clanon":
+      case "clanwho":
         bot.simulateTyping(channelID);
         bot.sendMessage({to: channelID, embed: await getOnlineMembers()});
         break;
@@ -41,41 +42,41 @@ bot.on('message', async function(user, userID, channelID, message, event) {
   }
 });
 
-function getBungieApiRequest(url){
-  return fetch(url, 
-    {
-      method: 'GET',
-      headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.TOKEN
-      }
-    }).then(response => response.json());
-}
+
 
 async function getOnlineMembers(){
-  const results = await getBungieApiRequest(`${bungieApiRoot}/GroupV2/${groupId}/Members/`);
+  const results = await getBungieRequest(`GroupV2/${groupId}/Members/`, bungieToken);
 
   if (results.ErrorCode == 1) {
     var allOnlineMembers = [];
     var membersList = results.Response.results;
 
-    membersList.forEach(function(member){
-      if (member.isOnline){
-        const name = member.destinyUserInfo.displayName;
-        const platform = member.destinyUserInfo.LastSeenDisplayNameType;
-        allOnlineMembers.push({name, platform});
-      }
-    });
 
-   var fields = [];
+    await asyncForEach(membersList, (async function(member){
+      if (member.isOnline){
+        const name = member.destinyUserInfo.LastSeenDisplayName;
+        const platform = member.destinyUserInfo.membershipType;
+        const lastPlatform = member.destinyUserInfo.LastSeenDisplayNameType;
+        const membershipId = member.destinyUserInfo.membershipId;
+        const activity = await getMemberInfo(platform, membershipId);
+        allOnlineMembers.push({name, platform, lastPlatform, membershipId, activity});
+      }
+    }));
+    
+    //console.log(allOnlineMembers);
+
+    var fields = [];
 
     for(var platform in PlatformDict){
       var onlineMembers = getUsersByPlatform(allOnlineMembers, PlatformDict[platform]);
       if (onlineMembers.length > 0)
+        console.log(onlineMembers);
         fields.push(
           {
             'name': `${platform} (${onlineMembers.length})`,
-            'value': onlineMembers,
+            'value': onlineMembers.map(member => {
+              return `${member.name} ${member.activity.name}${member.isMatchMaking ? '(MM)' : ''}`
+            }).join(' \n '),
           }
         )
     }
@@ -84,7 +85,7 @@ async function getOnlineMembers(){
       title: 'Online Players',
       fields: fields
     }
-
+    console.log(logMessage);
     return logMessage;
   }
   else {
@@ -95,18 +96,57 @@ async function getOnlineMembers(){
 function getUsersByPlatform(membersList, platform){
   return membersList
     .filter(function (item) {
-      return item.platform === platform
+      return item.lastPlatform === platform
     })
-    .map(member => member.name)
-    .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}))
-    .join(', ');
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+}
+
+async function getMemberInfo(membershipType, membershipId){
+  const request = await getBungieRequest(`Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {components: '200,204,1000'}); 
+  if (request.ErrorCode != 1){
+    return;
+  }
+  const profile = request.Response;
+  if (profile === undefined){
+    return;
+  }
+
+  // console.log(profile.characterActivities.data);
+  var foo = Object.keys(profile.characterActivities.data).map(character => {
+    var mode = profile.characterActivities.data[character].currentActivityModeHash;
+    var activityHash = profile.characterActivities.data[character].currentActivityHash;
+    var activity = activityManifest[activityHash];
+    var destinationHash = activity && activity.destinationHash;
+    var destination = destinationManifest[destinationHash];
+    return {
+      'id': character,
+      'lastPlayed': profile.characterActivities.data[character].dateActivityStarted,
+      'activityHash': activity,
+      'name': `${modeManifest[mode] && modeManifest[mode].displayProperties.name} ${activityManifest[activityHash] && activityManifest[activityHash].displayProperties.name}`,
+      'destination': destination && destination.displayProperties.name,
+      'inMatchMaking': profile.profileTransitoryData.data.joinability.closedReasons == 1
+    }
+  }).sort((a, b) => {
+    if (a.lastPlayed > b.lastPlayed)
+      return -1;
+    return 1;
+  });
+
+  return foo[0];
 }
 
 //this is hardcoded from the bungieAPI
 const PlatformDict = {
   Xbox: 1,
-  Psn: 2,
-  PC: 3,
-  PC2: 4,
+  Playstation: 2,
+  Steam: 3,
+  Battlenet: 4,
   Stadia: 5,
 };
+
+
+async function asyncForEach(array, callback) {
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index, array);
+  }
+}
