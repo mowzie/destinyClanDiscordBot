@@ -120,4 +120,13 @@ const adventures = [
   4238309598,
 ];
 
-module.exports = { adventures };
+const platforms = {
+    Xbox: 1,
+    Playstation: 2,
+    Steam: 3,
+    Battlenet: 4,
+    Stadia: 5,
+  };
+  
+
+module.exports = { adventures, platforms };
