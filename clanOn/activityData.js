@@ -27,7 +27,7 @@ async function getActivityData(membershipType, membershipId, bungieToken){
       if (adventures.includes(definitionActivity.hash)) {
         // Adventures
 
-        lastActivityString = `${t('Adventure')}: ${definitionActivity.displayProperties.name}`;
+        lastActivityString = `${('Adventure')}: ${definitionActivity.displayProperties.name}`;
       }
         else if (definitionActivity.placeHash === 2961497387) {
             // Orbit
@@ -56,7 +56,7 @@ async function getActivityData(membershipType, membershipId, bungieToken){
         } else if (definitionActivity && definitionActivity.activityTypeHash === 400075666) {
           // Menagerie
   
-          lastActivityString = `${definitionActivity.selectionScreenDisplayProperties.name ? definitionActivity.selectionScreenDisplayProperties.name : definitionActivity.displayProperties && definitionActivity.displayProperties.name}`;
+          lastActivityString = `${definitionActivity.selectionScreenDisplayProperties && definitionActivity.selectionScreenDisplayProperties.name ? definitionActivity.selectionScreenDisplayProperties.name : definitionActivity.displayProperties && definitionActivity.displayProperties.name}`;
         } else if (lastActivity.currentActivityModeHash === 547513715) {
           // Nightfalls
   
@@ -75,10 +75,10 @@ async function getActivityData(membershipType, membershipId, bungieToken){
             lastActivityString = `${definitionActivityMode.displayProperties.name}: ${definitionDestination.displayProperties.name}`;
         }
         
-        else if (lastActivity.currentActivityModeTypes.indexOf(5) > -1) {
+        else if (lastActivity.currentActivityModeTypes && lastActivity.currentActivityModeTypes.indexOf(5) > -1) {
           // Crucible
   
-          lastActivityString = `${modeManifest[1164760504].displayProperties.name}: ${definitionActivityPlaylist.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
+          lastActivityString = `${definitionActivityPlaylist.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
         } else if ([135537449, 740891329, 1166905690].includes(lastActivity.currentPlaylistActivityHash)) {
           // Survival, Survival: Freelances
   
@@ -95,7 +95,11 @@ async function getActivityData(membershipType, membershipId, bungieToken){
           // Convert Raid: Prophecy -> Dungeon: Prophecy
   
           lastActivityString = `${activityManifest[608898761].displayProperties.name}: ${definitionActivity.displayProperties.name}`;
-        } else if (definitionActivityMode) {
+        } else if (definitionActivityMode && definitionActivityMode.hash === 2043403989) {
+          // Raid
+          lastActivityString = `${definitionActivity.displayProperties.name}`;
+        }
+        else if (definitionActivityMode) {
           // Default
   
           lastActivityString = `${definitionActivityMode.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
@@ -110,6 +114,9 @@ async function getActivityData(membershipType, membershipId, bungieToken){
 
     const lastMode = (definitionActivityMode && definitionActivityMode.parentHashes && definitionActivityMode.parentHashes.map((hash) => modeManifest[hash])) || [];
     const joinability = profile.profileTransitoryData.data && profile.profileTransitoryData.data.joinability;
+    const partyMembers = profile.profileTransitoryData.data && profile.profileTransitoryData.data.partyMembers.map(member => {
+      return member.displayName;
+    });
     return {
       'displayName': name,
       'character': character,
@@ -123,13 +130,25 @@ async function getActivityData(membershipType, membershipId, bungieToken){
       'definitionActivityPlaylist': definitionActivityPlaylist,
       'definitionDestination': definitionDestination,
       'inMatchMaking': joinability && joinability.openSlots > 0 && joinability.closedReasons == 1,
-      'matchmakingProperties': definitionActivityPlaylist && definitionActivityPlaylist.matchmaking || definitionActivity.matchmaking
+      'joinable': joinability && joinability.openSlots > 0 && joinability.closedReasons == 0,
+      'joinability': joinability,
+      'partyMembers': partyMembers,
     }
   }).sort((a, b) => {
     if (a.lastPlayed > b.lastPlayed)
       return -1;
     return 1;
   })[0];
+
+  var foo = {
+    'name':currentActivity.displayName,
+    'activity': currentActivity.name,
+    'inMM': currentActivity.inMatchMaking,
+    'joinable': currentActivity.joinable,
+    'joinability': currentActivity.joinability,
+    'currentActivity': currentActivity.definitionActivity,
+    'party': currentActivity.partyMembers,
+  };
 
   return currentActivity;
 }

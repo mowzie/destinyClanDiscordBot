@@ -2,7 +2,6 @@ const Discord = require('discord.io');
 require('dotenv').config();
 const {getBungieRequest} = require('./fetch.js');
 const {getActivityData} = require('./activityData.js');
-
 const prefix = '!';
 const bungieToken = process.env.TOKEN;
 const groupId = process.env.GROUPID;
@@ -33,9 +32,9 @@ bot.on('message', async function(user, userID, channelID, message, event) {
       return;
     }
     switch (command[0]) { // Execute code depending on first word
-      case "clanon":
+      case "clanwho":
         bot.simulateTyping(channelID);
-        bot.sendMessage({to: channelID, embed: await getOnlineMembers()});
+        bot.sendMessage({to: channelID, message: await getOnlineMembers()});
         break;
     }
   }
@@ -62,18 +61,59 @@ async function getOnlineMembers(){
       }
     }));
     var fields = [];
+    var content = `**Online Players (${allOnlineMembers.length})**\n`;
+    var padName = allOnlineMembers.map(member => {return member.name}).sort((a,b) => {return b.length - a.length})[0].length + 2;
+    var padActivity = allOnlineMembers.map(member => {return member.activity.name}).sort((a,b) => {return b.length - a.length})[0].length + 2;
 
     for(var platform in PlatformDict){
       var onlineMembers = getUsersByPlatform(allOnlineMembers, PlatformDict[platform]);
       if (onlineMembers.length > 0) {
-        fields.push(
-          {
-            'name': `${platform} (${onlineMembers.length})`,
-            'value': onlineMembers.map(member => {
-              return `${member.name} > ${member.activity.name} `
-            }).join(' \n '),
-          }
-        )
+        //  onlineMembers.map(member => {
+        //   fields.push({
+        //     'name': `**${member.name}**`,
+        //     'value': `${member.activity.name}`,
+        //     'inline': true
+        //   });
+        // });
+
+        // fields.push(
+        //   {
+        //     'name': `${platform} (${onlineMembers.length})`,
+        //     'value': onlineMembers.map(member => {
+        //       return `**${member.name}** > ${member.activity.name}`
+        //     }).join('\n'),
+        //   }
+        // );
+
+        // var text = onlineMembers.map(member => {
+        //     var name = `${member.name}`;
+        //     var paddingName = ' '.repeat(padName - member.name.length);
+        //     var activity = member.activity.name;
+        //     var paddingActivity = ' '.repeat(padActivity - activity.length);
+        //     var canJoin = member.activity.joinable ? '(j)' : '';
+        //     return name + paddingName + activity + paddingActivity + canJoin;
+        //   });
+
+        //      fields.push({
+        //     'name': `ffoo`,
+        //     'value': text.join('\n'),
+        //   });
+        
+        
+
+        content += `${platform} (${onlineMembers.length})\n`;
+        content += "\`\`\`";
+        content += onlineMembers.map(member => {
+          var name = `${member.name}`;
+          var paddingName = ' '.repeat(padName - member.name.length);
+          var activity = member.activity.name;
+          var paddingActivity = ' '.repeat(padActivity - activity.length);
+          var canJoin = member.activity.joinable ? 'j' : '';
+          return name + paddingName + activity + paddingActivity + canJoin;
+        }
+        ).join('\n');
+        content += "\`\`\`";
+        content += `\n`;
       }
     }
 
@@ -82,10 +122,10 @@ async function getOnlineMembers(){
       fields: fields
     }
     console.log(logMessage);
-    return logMessage;
+    return content;
   }
   else {
-    console.log(results);
+    console.log(logMessage);
   }
 }
 
@@ -110,9 +150,3 @@ const PlatformDict = {
   Stadia: 5,
 };
 
-
-async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
-  }
-}
