@@ -63,14 +63,18 @@ async function getOnlineMembers() {
         const lastPlatform = member.destinyUserInfo.LastSeenDisplayNameType;
         const membershipId = member.destinyUserInfo.membershipId;
         const activity = await getMemberInfo(platform, membershipId);
+        if (activity) {
         onlineMembers.push({
           name,
           platform,
           lastPlatform,
           membershipId,
           activity
-        });
+        })
+      } else {
+        console.log(`error!:   ${name}`);
       }
+    }
     }));
     return onlineMembers;
   }
@@ -119,9 +123,9 @@ function tabulateMembers(onlineMembers) {
       content += platformMembers.map(member => {
         var name = `${member.name}`;
         var paddingName = ' '.repeat(Math.max(1, (padName - member.name.length)));
-        var activity = member.activity.name;
-        var paddingActivity = ' '.repeat(Math.max(0, (padActivity - activity.length)));
-        return name + paddingName + activity + paddingActivity;
+        var activityName = member.activity.name;
+        var paddingActivity = ' '.repeat(Math.max(0, (padActivity - activityName.length)));
+        return name + paddingName + activityName + paddingActivity;
       }).join('\n');
       content += "\`\`\`\n";
     }
@@ -157,6 +161,9 @@ function combineFireteamMemembers(membersList) {
     if (!old) {
       m.push(obj);
     } else {
+      if (obj.activity.isLeader)
+      old.name = `${obj.name} \n` + old.name;
+      else
       old.name += `\n ${obj.name} `;
       old.hasClanFireteam = true;
     }
