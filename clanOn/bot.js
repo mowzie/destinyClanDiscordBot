@@ -1,11 +1,13 @@
 const Discord = require('discord.io');
-const fetch = require('node-fetch');
 require('dotenv').config();
+const { getBungieRequest } = require('./fetch.js');
+const { getActivityData } = require('./activityData.js');
+const { platforms } = require('./enums');
 const prefix = '!';
-
-const bungieApiRoot = 'https://www.bungie.net/Platform';
+const bungieToken = process.env.TOKEN;
 const groupId = process.env.GROUPID;
-console.log(groupId);
+
+//Setup DiscordBot
 const bot = new Discord.Client({
   token: process.env.DISCORDTOKEN,
   autorun: true
@@ -13,11 +15,11 @@ const bot = new Discord.Client({
 
 bot.once('ready', () => {
   console.log('Ready!');
-    bot.setPresence({
-      game: {
-              name: '!clanon',
-      }
-    });
+  bot.setPresence({
+    game: {
+      name: '!clanon',
+    }
+  });
 });
 
 bot.on('disconnect', function(erMsg, code) {
@@ -26,87 +28,139 @@ bot.on('disconnect', function(erMsg, code) {
 });
 
 bot.on('message', async function(user, userID, channelID, message, event) {
-//  console.log(`received \`${message}\` from \`${user}\``);
   if (message.startsWith(prefix)) { // Message starts with prefix
     let command = message.slice(prefix.length).split(" "); // Split message into words
-    if (command.length != 1){
+    if (command.length != 1) {
       return;
     }
     switch (command[0]) { // Execute code depending on first word
       case "clanon":
         bot.simulateTyping(channelID);
-        bot.sendMessage({to: channelID, embed: await getOnlineMembers()});
+        var onlineMembers = (await getOnlineMembers()).sort((a, b) => a.name.localeCompare(b.name, undefined, {
+          sensitivity: 'base'
+        }));;
+        var messageContent = tabulateMembers(onlineMembers);
+        bot.sendMessage({
+          to: channelID,
+          message: messageContent
+        });
         break;
     }
   }
 });
 
-function getBungieApiRequest(url){
-  return fetch(url, 
-    {
-      method: 'GET',
-      headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.TOKEN
-      }
-    }).then(response => response.json());
-}
-
-async function getOnlineMembers(){
-  const results = await getBungieApiRequest(`${bungieApiRoot}/GroupV2/${groupId}/Members/`);
+async function getOnlineMembers() {
+  const results = await getBungieRequest(`GroupV2/${groupId}/Members/`, bungieToken);
 
   if (results.ErrorCode == 1) {
-    var allOnlineMembers = [];
+    var onlineMembers = [];
     var membersList = results.Response.results;
 
-    membersList.forEach(function(member){
-      if (member.isOnline){
+    await Promise.all(membersList.map(async (member) => {
+      if (member.isOnline) {
         const name = member.destinyUserInfo.displayName;
-        const platform = member.destinyUserInfo.LastSeenDisplayNameType;
-        allOnlineMembers.push({name, platform});
+        const platform = member.destinyUserInfo.membershipType;
+        const lastPlatform = member.destinyUserInfo.LastSeenDisplayNameType;
+        const membershipId = member.destinyUserInfo.membershipId;
+        const activity = await getMemberInfo(platform, membershipId);
+        onlineMembers.push({
+          name,
+          platform,
+          lastPlatform,
+          membershipId,
+          activity
+        });
       }
-    });
-
-   var fields = [];
-
-    for(var platform in PlatformDict){
-      var onlineMembers = getUsersByPlatform(allOnlineMembers, PlatformDict[platform]);
-      if (onlineMembers.length > 0)
-        fields.push(
-          {
-            'name': `${platform} (${onlineMembers.split(',').length})`,
-            'value': onlineMembers,
-          }
-        )
-    }
-
-    const logMessage = {
-      title: 'Online Players',
-      fields: fields
-    }
-
-    return logMessage;
-  }
-  else {
-    console.log(results);
+    }));
+    return onlineMembers;
   }
 }
 
-function getUsersByPlatform(membersList, platform){
+function tabulateMembers(onlineMembers) {
+  var content = `**Online Players (${onlineMembers.length})**\n`;
+
+  for (var platform in platforms) {
+    var platformMembers = getUsersByPlatform(onlineMembers, platforms[platform]);
+
+    if (platformMembers.length > 0) {
+
+      content += `${platform} (${platformMembers.length})\n`;
+
+      var padName = platformMembers.map(member => {
+        return member.name
+      }).sort((a, b) => {
+        return b.length - a.length
+      })[0].length + 2;
+
+      platformMembers = combineFireteamMemembers(platformMembers);
+      var padActivity = platformMembers.map(member => {
+        return member.activity.name
+      }).sort((a, b) => {
+        return b.length - a.length
+      })[0].length + 2;
+
+
+      // Not using this, but i want to keep it for later
+      // var text = onlineMembers.map(member => {
+      //     var name = `${member.name}`;
+      //     var paddingName = ' '.repeat(padName - member.name.length);
+      //     var activity = member.activity.name;
+      //     var paddingActivity = ' '.repeat(padActivity - activity.length);
+      //     var canJoin = member.activity.joinable ? '(j)' : '';
+      //     return name + paddingName + activity + paddingActivity + canJoin;
+      //   });
+
+      //      fields.push({
+      //     'name': `ffoo`,
+      //     'value': text.join('\n'),
+      //   });
+
+      content += "\`\`\`";
+      content += platformMembers.map(member => {
+        var name = `${member.name}`;
+        var paddingName = ' '.repeat(Math.max(1, (padName - member.name.length)));
+        var activity = member.activity.name;
+        var paddingActivity = ' '.repeat(Math.max(0, (padActivity - activity.length)));
+        return name + paddingName + activity + paddingActivity;
+      }).join('\n');
+      content += "\`\`\`\n";
+    }
+  }
+  return content;
+}
+
+function getUsersByPlatform(membersList, platform) {
   return membersList
-    .filter(function (item) {
-      return item.platform === platform
-    })
-    .map(member => member.name)
-    .sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}))
-    .join(', ');
+    .filter(function(item) {
+      return item.lastPlatform === platform
+    });
 }
 
-//this is hardcoded from the bungieAPI
-const PlatformDict = {
-  Xbox: 1,
-  Psn: 2,
-  PC: 3,
-  PC2: 4,
-  Stadia: 5,
-};
+async function getMemberInfo(membershipType, membershipId) {
+  const request = await getBungieRequest(`Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {
+    components: '100,204,1000'
+  });
+  if (request.ErrorCode != 1) {
+    return;
+  }
+  const profile = request.Response;
+  if (!profile) {
+    return [{}];
+  }
+  return await getActivityData(profile);
+}
+
+function combineFireteamMemembers(membersList) {
+  return membersList.reduce((m, obj) => {
+    var old = null;
+    old = m.find(mem => mem.activity.partyMembers && mem.activity.partyMembers.includes(obj.name));
+    if (!old) {
+      m.push(obj);
+    } else {
+      old.name += `\n ${obj.name} `;
+      old.hasClanFireteam = true;
+    }
+
+    return m;
+  }, []);
+}
