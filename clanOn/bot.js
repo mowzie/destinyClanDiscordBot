@@ -63,14 +63,16 @@ async function getOnlineMembers() {
         const lastPlatform = member.destinyUserInfo.LastSeenDisplayNameType;
         const membershipId = member.destinyUserInfo.membershipId;
         const activity = await getMemberInfo(platform, membershipId);
+        if (activity) {
         onlineMembers.push({
           name,
           platform,
           lastPlatform,
           membershipId,
           activity
-        });
+        })
       }
+    }
     }));
     return onlineMembers;
   }
@@ -86,19 +88,14 @@ function tabulateMembers(onlineMembers) {
 
       content += `${platform} (${platformMembers.length})\n`;
 
-      var padName = platformMembers.map(member => {
-        return member.name
-      }).sort((a, b) => {
-        return b.length - a.length
-      })[0].length + 2;
-
       platformMembers = combineFireteamMemembers(platformMembers);
-      var padActivity = platformMembers.map(member => {
-        return member.activity.name
+      var padName = platformMembers.map(member => {
+        if (member.hasClanFireteam)
+          member.pad = member.pad + 1;
+        return member.pad;
       }).sort((a, b) => {
-        return b.length - a.length
-      })[0].length + 2;
-
+        return b - a
+      })[0] + 1;
 
       // Not using this, but i want to keep it for later
       // var text = onlineMembers.map(member => {
@@ -117,11 +114,10 @@ function tabulateMembers(onlineMembers) {
 
       content += "\`\`\`";
       content += platformMembers.map(member => {
-        var name = `${member.name}`;
-        var paddingName = ' '.repeat(Math.max(1, (padName - member.name.length)));
-        var activity = member.activity.name;
-        var paddingActivity = ' '.repeat(Math.max(0, (padActivity - activity.length)));
-        return name + paddingName + activity + paddingActivity;
+        var name = `${member.name.trim()}`;
+        var paddingName = ' '.repeat(Math.max(0, (padName - member.pad)));
+        var activityName = member.activity.name;
+        return name + paddingName + activityName;
       }).join('\n');
       content += "\`\`\`\n";
     }
@@ -154,9 +150,18 @@ function combineFireteamMemembers(membersList) {
   return membersList.reduce((m, obj) => {
     var old = null;
     old = m.find(mem => mem.activity.partyMembers && mem.activity.partyMembers.includes(obj.name));
+    obj.pad = obj.name.trim().length;
+
     if (!old) {
+      
       m.push(obj);
     } else {
+      old.pad = Math.max(obj.name.trim().length, old.pad);
+      if (obj.activity.isLeader) {
+        
+      old.name = `${obj.name} \n ${old.name}`;
+      }
+      else
       old.name += `\n ${obj.name} `;
       old.hasClanFireteam = true;
     }
