@@ -14,6 +14,9 @@ async function getActivityData(profile) {
     const lastActivity = profile.characterActivities.data[character];
     const name = profile.profile.data.userInfo.displayName;
     const definitionActivity = lastActivity.currentActivityHash && activityManifest[lastActivity.currentActivityHash];
+    if (lastActivity.currentActivityModeHash === 2166136261) {
+      lastActivity.currentActivityModeHash = 2043403989;
+    }
     const definitionActivityMode = lastActivity.currentActivityModeHash && modeTypeManifest[lastActivity.currentActivityModeHash] || modeManifest[lastActivity.currentActivityModeHash];
     const definitionDestination = destinationManifest[definitionActivity.destinationHash];
     const definitionActivityPlaylist = lastActivity.currentPlaylistActivityHash && activityManifest[lastActivity.currentPlaylistActivityHash]
@@ -30,11 +33,21 @@ async function getActivityData(profile) {
     } else if (lastActivity.currentActivityModeHash === 3497767639) {
       // patrol
       lastActivityString = `${definitionActivityMode.displayProperties.name}: ${definitionDestination.displayProperties.name}`;
-    } else if (lastActivity.currentActivityHash === 4148187374) {
-      // Dungeon: Prophecy
+    } else if (lastActivity.currentActivityHash === 4148187374 || lastActivity.currentActivityHash === 2032534090) {
+      // Dungeon: Prophecy / shattered throne
 
       lastActivityString = `${modeTypeManifest[608898761].displayProperties.name}: ${definitionActivity.displayProperties.name}`;
-    } else if (lastActivity.currentActivityModeTypes && lastActivity.currentActivityModeTypes.indexOf(5) > -1) {
+    } else if ([135537449, 740891329].includes(lastActivity.currentPlaylistActivityHash)) {
+      // Survival, Survival: Freelance
+
+      lastActivityString = `Crucible: Survival: ${definitionActivity.displayProperties.name}`;
+    }else if (definitionActivity.activityTypeHash === 400075666) {
+      // Menagerie
+
+      lastActivityString = `${definitionActivity.originalDisplayProperties.name}`;
+    }
+    
+    else if (lastActivity.currentActivityModeHash === 1164760504) {
       // Crucible
 
       lastActivityString = `Crucible: ${definitionActivityPlaylist.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
@@ -42,7 +55,7 @@ async function getActivityData(profile) {
       // Nightfalls
 
       lastActivityString = `${definitionActivity.originalDisplayProperties.name}: ${definitionActivity.displayProperties.description}`;
-    } else if (lastActivity && lastActivity.currentActivityModeHash == 2166136261) {
+    } else if (definitionActivity && definitionActivity.activityTypeHash === 332181804) {
       // nightmare hunt
       lastActivityString = definitionActivity.originalDisplayProperties.name;
     }
@@ -61,11 +74,11 @@ async function getActivityData(profile) {
       console.log(name + " has no party members?");
     }
     else {
-      partyMembers.shift();
       if (partyMembers.length > 0){
         if (profile.profileTransitoryData.data.partyMembers[0].status == 11)
           isLeader = true;
       }
+      partyMembers.shift();
     }
 
     return {
