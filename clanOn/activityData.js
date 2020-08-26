@@ -6,6 +6,7 @@ const { adventures } = require('./enums');
 
 async function getActivityData(profile) {
 
+
   const currentActivity = Object.keys(profile.characterActivities.data).filter(char => {
     if (profile.characterActivities.data[char].currentActivityHash === 0)
       return false;
@@ -17,13 +18,14 @@ async function getActivityData(profile) {
     if (lastActivity.currentActivityModeHash === 2166136261) {
       lastActivity.currentActivityModeHash = 2043403989;
     }
+
     const definitionActivityMode = lastActivity.currentActivityModeHash && modeTypeManifest[lastActivity.currentActivityModeHash] || modeManifest[lastActivity.currentActivityModeHash];
     const definitionDestination = destinationManifest[definitionActivity.destinationHash];
     const definitionActivityPlaylist = lastActivity.currentPlaylistActivityHash && activityManifest[lastActivity.currentPlaylistActivityHash]
     let lastActivityString = false;
+
     const memberId = profile.profile.data.userInfo.membershipId;
 
-  
     if (definitionActivity.placeHash === 2961497387) {
       // orbit
       lastActivityString = "In Orbit";
@@ -69,6 +71,7 @@ async function getActivityData(profile) {
     const partyMembers = profile.profileTransitoryData.data && profile.profileTransitoryData.data.partyMembers.map(member => {
       return member.displayName;
     });
+
     let isLeader = false;
     if (partyMembers === undefined) {
       console.log(name + " has no party members?");

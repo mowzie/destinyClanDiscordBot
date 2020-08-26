@@ -88,8 +88,6 @@ function tabulateMembers(onlineMembers) {
 
       content += `${platform} (${platformMembers.length})\n`;
 
-
-
       platformMembers = combineFireteamMemembers(platformMembers);
       var padName = platformMembers.map(member => {
         if (member.hasClanFireteam)
