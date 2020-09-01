@@ -1,7 +1,7 @@
-const activityManifest = require('./manifestActivity.json');
-const modeManifest = require('./manifestMode.json');
-const modeTypeManifest = require('./manifestModeType.json');
-const destinationManifest = require('./manifestDestination.json');
+const activityManifest = require('./manifest/manifestActivity.json');
+const modeManifest = require('./manifest/manifestMode.json');
+const modeTypeManifest = require('./manifest/manifestModeType.json');
+const destinationManifest = require('./manifest/manifestDestination.json');
 const { adventures } = require('./enums');
 
 async function getActivityData(profile) {
