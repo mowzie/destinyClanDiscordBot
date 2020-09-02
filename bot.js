@@ -151,18 +151,17 @@ function combineFireteamMemembers(membersList) {
     var old = null;
     old = m.find(mem => mem.activity.partyMembers && mem.activity.partyMembers.includes(obj.name));
     obj.pad = obj.name.trim().length;
-
     if (!old) {
       
       m.push(obj);
     } else {
       if (obj.activity.isLeader) {
         old.pad = Math.min(obj.name.trim().length, old.pad);  
-        old.name = `${obj.name} \n ${old.name}`;
+        old.name = `${obj.name} \n ${old.name} `;
       }
       else {
         old.pad = Math.max(obj.name.trim().length, old.pad);
-        old.name += `\n ${obj.name} `;
+        old.name += ` \n ${obj.name} `;
       }
 
       old.hasClanFireteam = true;
