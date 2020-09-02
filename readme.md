@@ -8,5 +8,5 @@ Activity lists may need some massaging since there are quite a few special cases
 
 Currently hosted on an AWS instance.
 
-![usage](media\usage.gif)
+![usage](media/usage.gif)
 
