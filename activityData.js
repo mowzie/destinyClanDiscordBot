@@ -1,11 +1,11 @@
-const activityManifest = require('./manifest/manifestActivity.json');
-const modeManifest = require('./manifest/manifestMode.json');
-const modeTypeManifest = require('./manifest/manifestModeType.json');
-const destinationManifest = require('./manifest/manifestDestination.json');
+const fs = require('fs')
 const { adventures } = require('./enums');
 
 async function getActivityData(profile) {
-
+  const DestinyActivityDefinition = JSON.parse(fs.readFileSync('./manifest/DestinyActivityDefinition.json'));
+  const DestinyActivityModeDefinition = JSON.parse(fs.readFileSync('./manifest/DestinyActivityModeDefinition.json'));
+  const DestinyActivityTypeDefinition = JSON.parse(fs.readFileSync('./manifest/DestinyActivityTypeDefinition.json'));
+  const DestinyDestinationDefinition = JSON.parse(fs.readFileSync('./manifest/DestinyDestinationDefinition.json'));
 
   const currentActivity = Object.keys(profile.characterActivities.data).filter(char => {
     if (profile.characterActivities.data[char].currentActivityHash === 0)
@@ -14,19 +14,23 @@ async function getActivityData(profile) {
   }).map(character => {
     const lastActivity = profile.characterActivities.data[character];
     const name = profile.profile.data.userInfo.displayName;
-    const definitionActivity = lastActivity.currentActivityHash && activityManifest[lastActivity.currentActivityHash];
+    const definitionActivity = lastActivity.currentActivityHash && DestinyActivityDefinition[lastActivity.currentActivityHash];
     if (lastActivity.currentActivityModeHash === 2166136261) {
       lastActivity.currentActivityModeHash = 2043403989;
     }
 
-    const definitionActivityMode = lastActivity.currentActivityModeHash && modeTypeManifest[lastActivity.currentActivityModeHash] || modeManifest[lastActivity.currentActivityModeHash];
-    const definitionDestination = destinationManifest[definitionActivity.destinationHash];
-    const definitionActivityPlaylist = lastActivity.currentPlaylistActivityHash && activityManifest[lastActivity.currentPlaylistActivityHash]
+    const definitionActivityMode = lastActivity.currentActivityModeHash && DestinyActivityTypeDefinition[lastActivity.currentActivityModeHash] || DestinyActivityModeDefinition[lastActivity.currentActivityModeHash];
+    const definitionDestination = definitionActivity && DestinyDestinationDefinition[definitionActivity.destinationHash];
+    const definitionActivityPlaylist = lastActivity.currentPlaylistActivityHash && DestinyActivityDefinition[lastActivity.currentPlaylistActivityHash]
     let lastActivityString = false;
 
     const memberId = profile.profile.data.userInfo.membershipId;
 
-    if (definitionActivity.placeHash === 2961497387) {
+    if (definitionActivity === undefined) {
+      lastActivityString = "send Mowzie DM"
+    }
+
+    else if (definitionActivity.placeHash === 2961497387) {
       // orbit
       lastActivityString = "In Orbit";
     } else if (lastActivity.currentActivityHash == 3858493935) {
@@ -38,7 +42,7 @@ async function getActivityData(profile) {
     } else if (lastActivity.currentActivityHash === 4148187374 || lastActivity.currentActivityHash === 2032534090) {
       // Dungeon: Prophecy / shattered throne
 
-      lastActivityString = `${modeTypeManifest[608898761].displayProperties.name}: ${definitionActivity.displayProperties.name}`;
+      lastActivityString = `${DestinyActivityTypeDefinition[608898761].displayProperties.name}: ${definitionActivity.displayProperties.name}`;
     } else if ([135537449, 740891329].includes(lastActivity.currentPlaylistActivityHash)) {
       // Survival, Survival: Freelance
 
@@ -66,7 +70,6 @@ async function getActivityData(profile) {
       // default
       lastActivityString = `${definitionActivityMode.displayProperties.name}: ${definitionActivity.displayProperties.name}`;
     }
-
     const joinability = profile.profileTransitoryData.data && profile.profileTransitoryData.data.joinability;
     const partyMembers = profile.profileTransitoryData.data && profile.profileTransitoryData.data.partyMembers.map(member => {
       return member.displayName;

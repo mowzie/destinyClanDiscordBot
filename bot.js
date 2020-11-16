@@ -1,8 +1,10 @@
 const Discord = require('discord.io');
+const fs = require('fs')
 require('dotenv').config();
 const { getBungieRequest } = require('./fetch.js');
 const { getActivityData } = require('./activityData.js');
 const { platforms } = require('./enums');
+const { response } = require('express');
 const prefix = '!';
 const bungieToken = process.env.TOKEN;
 const groupId = process.env.GROUPID;
@@ -35,6 +37,8 @@ bot.on('message', async function(user, userID, channelID, message, event) {
     }
     switch (command[0]) { // Execute code depending on first word
       case "clanon":
+        console.log(channelID)
+        await updateManifest(channelID);
         bot.simulateTyping(channelID);
         var onlineMembers = (await getOnlineMembers()).sort((a, b) => a.name.localeCompare(b.name, undefined, {
           sensitivity: 'base'
@@ -50,7 +54,7 @@ bot.on('message', async function(user, userID, channelID, message, event) {
 });
 
 async function getOnlineMembers() {
-  const results = await getBungieRequest(`GroupV2/${groupId}/Members/`, bungieToken);
+  const results = await getBungieRequest(`Platform/GroupV2/${groupId}/Members/`, bungieToken);
 
   if (results.ErrorCode == 1) {
     var onlineMembers = [];
@@ -133,7 +137,7 @@ function getUsersByPlatform(membersList, platform) {
 }
 
 async function getMemberInfo(membershipType, membershipId) {
-  const request = await getBungieRequest(`Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {
+  const request = await getBungieRequest(`Platform/Destiny2/${membershipType}/Profile/${membershipId}`, bungieToken, {
     components: '100,204,1000'
   });
   if (request.ErrorCode != 1) {
@@ -169,4 +173,47 @@ function combineFireteamMemembers(membersList) {
 
     return m;
   }, []);
+}
+
+
+
+async function updateManifest(channelId) {
+  var manifestFile = '.\\manifest\\manifest.json';
+  
+  var request = await getBungieRequest('Platform/Destiny2/Manifest', bungieToken);
+  
+  if (fs.existsSync(manifestFile)) {
+    var manifest = JSON.parse(fs.readFileSync(manifestFile));
+    if (request.ErrorCode != 1) {
+      console.log('request.errorcode something other than 1');
+      return;
+    }
+
+    if (manifest.version == request.Response.version)
+    {
+      return;
+    }
+  }
+  manifest = request.Response;
+
+  fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2));
+
+  var DestinyActivityDefinition = manifest.jsonWorldComponentContentPaths.en.DestinyActivityDefinition;
+  var DestinyActivityTypeDefinition = manifest.jsonWorldComponentContentPaths.en.DestinyActivityTypeDefinition;
+  var DestinyActivityModeDefinition = manifest.jsonWorldComponentContentPaths.en.DestinyActivityModeDefinition;
+  var DestinyDestinationDefinition = manifest.jsonWorldComponentContentPaths.en.DestinyDestinationDefinition;
+
+  doManifestStuff(DestinyActivityDefinition, Object.keys({DestinyActivityDefinition})[0]);
+  doManifestStuff(DestinyActivityTypeDefinition, Object.keys({DestinyActivityTypeDefinition})[0]);
+  doManifestStuff(DestinyActivityModeDefinition, Object.keys({DestinyActivityModeDefinition})[0]);
+  doManifestStuff(DestinyDestinationDefinition, Object.keys({DestinyDestinationDefinition})[0]);
+  bot.sendMessage({
+    to: channelId,
+    message: 'i updated the manifest files!'
+  });
+}
+
+async function doManifestStuff(url, name) {
+  var manifest = await getBungieRequest(url, bungieToken);
+  fs.writeFileSync(`.\\manifest\\${name}.json`, JSON.stringify(manifest, null, 2));
 }

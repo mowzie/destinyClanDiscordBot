@@ -1,7 +1,11 @@
 const fetch = require('node-fetch');
-const bungieApiRoot = 'https://www.bungie.net/Platform/';
+const bungieRoot = 'https://bungie.net/';
 
-async function getBungieRequest(url, token, params, method = 'GET') {
+async function getBungieRequest(url, token, params = null){
+  return getRequest(bungieRoot, url, token, params);
+}
+
+async function getRequest(baseUrl, url, token, params = null, method = 'GET') {
 
   const options = {
     method,
@@ -19,7 +23,7 @@ async function getBungieRequest(url, token, params, method = 'GET') {
     }
   }
 
-  const response = await fetch(bungieApiRoot + url, options);
+  const response = await fetch(baseUrl + url, options);
 
   if (response.status !== 200) {
     return generateErrorResponse('The server responded with an unexpected status.', response);
