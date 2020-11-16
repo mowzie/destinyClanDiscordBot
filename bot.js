@@ -36,7 +36,7 @@ bot.on('message', async function(user, userID, channelID, message, event) {
       return;
     }
     switch (command[0]) { // Execute code depending on first word
-      case "clanon":
+      case "clanwho":
         console.log(channelID)
         await updateManifest(channelID);
         bot.simulateTyping(channelID);
@@ -178,7 +178,7 @@ function combineFireteamMemembers(membersList) {
 
 
 async function updateManifest(channelId) {
-  var manifestFile = '.\\manifest\\manifest.json';
+  var manifestFile = './manifest/manifest.json';
   
   var request = await getBungieRequest('Platform/Destiny2/Manifest', bungieToken);
   
@@ -215,5 +215,5 @@ async function updateManifest(channelId) {
 
 async function doManifestStuff(url, name) {
   var manifest = await getBungieRequest(url, bungieToken);
-  fs.writeFileSync(`.\\manifest\\${name}.json`, JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(`./manifest/${name}.json`, JSON.stringify(manifest, null, 2));
 }
