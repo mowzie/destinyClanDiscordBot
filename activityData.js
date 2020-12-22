@@ -36,7 +36,11 @@ async function getActivityData(profile) {
     } else if (lastActivity.currentActivityHash == 3858493935) {
       // tribute hall
       lastActivityString = "Tribute Hall";
-    } else if (lastActivity.currentActivityModeHash === 3497767639) {
+    } else if (definitionActivity && definitionActivity.activityTypeHash === 103143560) {
+      // Legendary lost sector
+      lastActivityString = `${definitionActivity.displayProperties.name}`
+    }
+     else if (lastActivity.currentActivityModeHash === 3497767639) {
       // patrol
       lastActivityString = `${definitionActivityMode.displayProperties.name}: ${definitionDestination.displayProperties.name}`;
     } else if (lastActivity.currentActivityHash === 4148187374 || lastActivity.currentActivityHash === 2032534090) {
@@ -60,10 +64,16 @@ async function getActivityData(profile) {
     } else if (definitionActivityMode && definitionActivityMode.hash === 547513715) {
       // Nightfalls
 
-      lastActivityString = `${definitionActivity.originalDisplayProperties.name}: ${definitionActivity.displayProperties.description}`;
+      lastActivityString = `Nightfall: ${definitionActivity.displayProperties.description}`;
     } else if (definitionActivity && definitionActivity.activityTypeHash === 332181804) {
       // nightmare hunt
       lastActivityString = definitionActivity.originalDisplayProperties.name;
+    } else if (definitionActivity && definitionActivity.activityHash === 494260690) {
+      // empire hunt
+      lastActivityString = definitionActivity.originalDisplayProperties.name;
+    } else if (definitionActivity && definitionActivity.hash === 1340699221) {
+      // wrathborn
+      lastActivityString = `${definitionDestination.displayProperties.name}: Wrathborn`
     }
     
     else if (definitionActivityMode) {
