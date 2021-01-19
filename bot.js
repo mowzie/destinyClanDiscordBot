@@ -32,11 +32,11 @@ bot.on('disconnect', function(erMsg, code) {
 bot.on('message', async function(user, userID, channelID, message, event) {
   if (message.startsWith(prefix)) { // Message starts with prefix
     let command = message.slice(prefix.length).split(" "); // Split message into words
-    if (command.length != 1) {
-      return;
-    }
-    switch (command[0]) { // Execute code depending on first word
-      case "clanwho":
+    switch (command[0].toLowerCase()) { // Execute code depending on first word
+      case "clanon":
+        if (command.length != 1) {
+          return;
+        }
         console.log(channelID)
         await updateManifest(channelID);
         bot.simulateTyping(channelID);
@@ -49,9 +49,43 @@ bot.on('message', async function(user, userID, channelID, message, event) {
           message: messageContent
         });
         break;
+      case "magic8ball":
+        bot.simulateTyping(channelID);
+        await sleep(1000);
+        bot.sendMessage({
+          to: channelID,
+          message: magic8ball()
+        })
     }
   }
 });
+
+function magic8ball() {
+  var choices = [
+    "It is certain.",
+    "It is decidedly so.",
+    "Without a doubt.",
+    "Yes, definitely.",
+    "You may rely on it.",
+    "As I see it, yes.",
+    "Most likely.",
+    "Outlook good.",
+    "Yes.",
+    "Signs point to yes.",
+    "Reply hazy, try again.",
+    "Ask again later.",
+    "Better not tell you now.",
+    "Cannot predict now.",
+    "Concentrate and ask again.",
+    "Don't count on it.",
+    "My reply is no.",
+    "My sources say no.",
+    "Outlook not so good.",
+    "Very doubtful."
+  ];
+  let predict = Math.floor(Math.random() * (choices.length));
+  return choices[predict];
+}
 
 async function getOnlineMembers() {
   const results = await getBungieRequest(`Platform/GroupV2/${groupId}/Members/`, bungieToken);
@@ -62,21 +96,23 @@ async function getOnlineMembers() {
 
     await Promise.all(membersList.map(async (member) => {
       if (member.isOnline) {
-        const name = member.destinyUserInfo.displayName;
+        const name = member.destinyUserInfo.displayName.trim();
+        const nameLength = name.length;
         const platform = member.destinyUserInfo.membershipType;
         const lastPlatform = member.destinyUserInfo.LastSeenDisplayNameType;
         const membershipId = member.destinyUserInfo.membershipId;
         const activity = await getMemberInfo(platform, membershipId);
         if (activity) {
-        onlineMembers.push({
-          name,
-          platform,
-          lastPlatform,
-          membershipId,
-          activity
-        })
+          onlineMembers.push({
+            name,
+            nameLength,
+            platform,
+            lastPlatform,
+            membershipId,
+            activity
+          })
+        }
       }
-    }
     }));
     return onlineMembers;
   }
@@ -94,12 +130,10 @@ function tabulateMembers(onlineMembers) {
 
       platformMembers = combineFireteamMemembers(platformMembers);
       var padName = platformMembers.map(member => {
-        if (member.hasClanFireteam)
-          member.pad = member.pad + 1;
-        return member.pad;
+        return member.nameLength;
       }).sort((a, b) => {
         return b - a
-      })[0] + 1;
+      })[0] + 2;
 
       // Not using this, but i want to keep it for later
       // var text = onlineMembers.map(member => {
@@ -119,7 +153,7 @@ function tabulateMembers(onlineMembers) {
       content += "\`\`\`";
       content += platformMembers.map(member => {
         var name = `${member.name.trim()}`;
-        var paddingName = ' '.repeat(Math.max(0, (padName - member.pad)));
+        var paddingName = ' '.repeat(Math.max(0, (padName - member.nameLength)));
         var activityName = member.activity.name;
         return name + paddingName + activityName;
       }).join('\n');
@@ -154,18 +188,16 @@ function combineFireteamMemembers(membersList) {
   return membersList.reduce((m, obj) => {
     var old = null;
     old = m.find(mem => mem.activity.partyMembers && mem.activity.partyMembers.includes(obj.name));
-    obj.pad = obj.name.trim().length;
     if (!old) {
-      
       m.push(obj);
     } else {
       if (obj.activity.isLeader) {
-        old.pad = Math.min(obj.name.trim().length, old.pad);  
-        old.name = `${obj.name} \n ${old.name} `;
+        old.nameLength = Math.max(obj.nameLength, old.nameLength +1);
+        old.name = `${obj.name} \n ${old.name}`;
       }
       else {
-        old.pad = Math.max(obj.name.trim().length, old.pad);
-        old.name += ` \n ${obj.name} `;
+        old.nameLength = Math.max(obj.nameLength +1, old.nameLength);
+        old.name += ` \n ${obj.name}`;
       }
 
       old.hasClanFireteam = true;
@@ -216,4 +248,8 @@ async function updateManifest(channelId) {
 async function doManifestStuff(url, name) {
   var manifest = await getBungieRequest(url, bungieToken);
   fs.writeFileSync(`./manifest/${name}.json`, JSON.stringify(manifest, null, 2));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
