@@ -91,7 +91,7 @@ async function getActivityData(profile) {
     }
     else {
       if (partyMembers.length > 0){
-        if (profile.profileTransitoryData.data.partyMembers[0].status == 11)
+        if ((profile.profileTransitoryData.data.partyMembers[0].status & 8) === 8)
           isLeader = true;
       }
       partyMembers.shift();
