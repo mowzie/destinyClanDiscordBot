@@ -130,6 +130,8 @@ function tabulateMembers(onlineMembers) {
 
       platformMembers = combineFireteamMemembers(platformMembers);
       var padName = platformMembers.map(member => {
+        if (member.hasClanFireteam)
+          return member.nameMax
         return member.nameLength;
       }).sort((a, b) => {
         return b - a
@@ -192,11 +194,13 @@ function combineFireteamMemembers(membersList) {
       m.push(obj);
     } else {
       if (obj.activity.isLeader) {
-        old.nameLength = Math.max(obj.nameLength, old.nameLength +1);
+        old.nameLength = Math.min(obj.nameLength , old.nameLength+1)
+        old.nameMax = Math.max(obj.nameLength , old.nameLength +1);
         old.name = `${obj.name} \n ${old.name}`;
       }
       else {
-        old.nameLength = Math.max(obj.nameLength +1, old.nameLength);
+        old.nameMax = Math.max(obj.nameLength +1, old.nameLength);
+        old.nameLength = obj.nameLength +1
         old.name += ` \n ${obj.name}`;
       }
 
