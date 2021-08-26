@@ -37,7 +37,7 @@ bot.on('message', async function(user, userID, channelID, message, event) {
         if (command.length != 1) {
           return;
         }
-        console.log(channelID)
+        //console.log(channelID)
         await updateManifest(channelID);
         bot.simulateTyping(channelID);
         var onlineMembers = (await getOnlineMembers()).sort((a, b) => a.name.localeCompare(b.name, undefined, {
@@ -214,8 +214,12 @@ function combineFireteamMemembers(membersList) {
 
 
 async function updateManifest(channelId) {
-  var manifestFile = './manifest/manifest.json';
   
+  const dir = './manifest/';
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
+  }
+  var manifestFile = './manifest/manifest.json';
   var request = await getBungieRequest('Platform/Destiny2/Manifest', bungieToken);
   
   if (fs.existsSync(manifestFile)) {
